@@ -17,6 +17,7 @@ import io.opentelemetry.instrumentation.api.instrumenter.messaging.MessageOperat
 import io.opentelemetry.instrumentation.api.instrumenter.messaging.MessagingAttributesExtractor;
 import io.opentelemetry.instrumentation.api.instrumenter.messaging.MessagingSpanNameExtractor;
 import java.util.Collections;
+import java.util.List;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -30,6 +31,10 @@ public final class KafkaInstrumenterFactory {
   private final OpenTelemetry openTelemetry;
   private final String instrumentationName;
   private ErrorCauseExtractor errorCauseExtractor = ErrorCauseExtractor.jdk();
+  private final List<String> capturedConsumerMessageHeaders =
+      KafkaMessageCapturedHeadersUtil.consumerMessageHeaders;
+  private final List<String> capturedProducerMessageHeaders =
+      KafkaMessageCapturedHeadersUtil.producerMessageHeaders;
 
   public KafkaInstrumenterFactory(OpenTelemetry openTelemetry, String instrumentationName) {
     this.openTelemetry = openTelemetry;
@@ -51,15 +56,24 @@ public final class KafkaInstrumenterFactory {
     KafkaProducerAttributesGetter getter = KafkaProducerAttributesGetter.INSTANCE;
     MessageOperation operation = MessageOperation.SEND;
 
-    return Instrumenter.<ProducerRecord<?, ?>, Void>builder(
+    InstrumenterBuilder<ProducerRecord<?, ?>, Void> instrumenterBuilder = Instrumenter
+        .<ProducerRecord<?, ?>, Void>builder(
             openTelemetry,
             instrumentationName,
             MessagingSpanNameExtractor.create(getter, operation))
         .addAttributesExtractor(MessagingAttributesExtractor.create(getter, operation))
         .addAttributesExtractors(extractors)
         .addAttributesExtractor(new KafkaProducerAdditionalAttributesExtractor())
-        .setErrorCauseExtractor(errorCauseExtractor)
-        .newInstrumenter(SpanKindExtractor.alwaysProducer());
+        .setErrorCauseExtractor(errorCauseExtractor);
+    if (!capturedProducerMessageHeaders.isEmpty()) {
+      instrumenterBuilder
+          .addAttributesExtractor(
+              new KafkaHeadersAttributesExtractor<>(
+                  capturedProducerMessageHeaders,
+                  KafkaHeadersAttributesExtractor.PRODUCER_RECORD_HEADERS_GETTER
+              ));
+    }
+    return instrumenterBuilder.newInstrumenter(SpanKindExtractor.alwaysProducer());
   }
 
   public Instrumenter<ConsumerRecords<?, ?>, Void> createConsumerReceiveInstrumenter() {
@@ -97,6 +111,14 @@ public final class KafkaInstrumenterFactory {
             .setErrorCauseExtractor(errorCauseExtractor);
     if (KafkaConsumerExperimentalAttributesExtractor.isEnabled()) {
       builder.addAttributesExtractor(new KafkaConsumerExperimentalAttributesExtractor());
+    }
+    if (!capturedConsumerMessageHeaders.isEmpty()) {
+      builder
+          .addAttributesExtractor(
+              new KafkaHeadersAttributesExtractor<>(
+                  capturedConsumerMessageHeaders,
+                  KafkaHeadersAttributesExtractor.CONSUMER_RECORD_HEADERS_GETTER
+              ));
     }
 
     if (!KafkaPropagation.isPropagationEnabled()) {
