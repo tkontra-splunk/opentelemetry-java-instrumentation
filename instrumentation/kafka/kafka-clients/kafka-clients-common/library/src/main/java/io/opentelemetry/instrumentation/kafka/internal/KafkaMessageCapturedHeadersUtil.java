@@ -21,8 +21,8 @@ public class KafkaMessageCapturedHeadersUtil {
   private static final String PRODUCER_HEADERS_PROPERTY =
       "otel.instrumentation.kafka.capture-headers.producer";
 
-  static final List<String> consumerMessageHeaders;
-  static final List<String> producerMessageHeaders;
+  private static final List<String> consumerMessageHeaders;
+  private static final List<String> producerMessageHeaders;
 
   static {
     Config config = Config.get();
@@ -58,4 +58,20 @@ public class KafkaMessageCapturedHeadersUtil {
   }
 
   private KafkaMessageCapturedHeadersUtil() {}
+
+  public static List<String> getProducerMessageHeaders() {
+    return producerMessageHeaders;
+  }
+
+  public static boolean shouldCaptureProducerMessageHeaders() {
+    return !getProducerMessageHeaders().isEmpty();
+  }
+
+  public static List<String> getConsumerMessageHeaders() {
+    return consumerMessageHeaders;
+  }
+
+  public static boolean shouldCaptureConsumerMessageHeaders() {
+    return !getConsumerMessageHeaders().isEmpty();
+  }
 }

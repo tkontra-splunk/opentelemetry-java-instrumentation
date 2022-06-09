@@ -31,10 +31,6 @@ public final class KafkaInstrumenterFactory {
   private final OpenTelemetry openTelemetry;
   private final String instrumentationName;
   private ErrorCauseExtractor errorCauseExtractor = ErrorCauseExtractor.jdk();
-  private final List<String> capturedConsumerMessageHeaders =
-      KafkaMessageCapturedHeadersUtil.consumerMessageHeaders;
-  private final List<String> capturedProducerMessageHeaders =
-      KafkaMessageCapturedHeadersUtil.producerMessageHeaders;
 
   public KafkaInstrumenterFactory(OpenTelemetry openTelemetry, String instrumentationName) {
     this.openTelemetry = openTelemetry;
@@ -65,11 +61,11 @@ public final class KafkaInstrumenterFactory {
         .addAttributesExtractors(extractors)
         .addAttributesExtractor(new KafkaProducerAdditionalAttributesExtractor())
         .setErrorCauseExtractor(errorCauseExtractor);
-    if (!capturedProducerMessageHeaders.isEmpty()) {
+    if (KafkaMessageCapturedHeadersUtil.shouldCaptureProducerMessageHeaders()) {
       instrumenterBuilder
           .addAttributesExtractor(
               new KafkaHeadersAttributesExtractor<>(
-                  capturedProducerMessageHeaders,
+                  KafkaMessageCapturedHeadersUtil.getProducerMessageHeaders(),
                   KafkaHeadersAttributesExtractor.PRODUCER_RECORD_HEADERS_GETTER
               ));
     }
@@ -112,11 +108,11 @@ public final class KafkaInstrumenterFactory {
     if (KafkaConsumerExperimentalAttributesExtractor.isEnabled()) {
       builder.addAttributesExtractor(new KafkaConsumerExperimentalAttributesExtractor());
     }
-    if (!capturedConsumerMessageHeaders.isEmpty()) {
+    if (KafkaMessageCapturedHeadersUtil.shouldCaptureConsumerMessageHeaders()) {
       builder
           .addAttributesExtractor(
               new KafkaHeadersAttributesExtractor<>(
-                  capturedConsumerMessageHeaders,
+                  KafkaMessageCapturedHeadersUtil.getConsumerMessageHeaders(),
                   KafkaHeadersAttributesExtractor.CONSUMER_RECORD_HEADERS_GETTER
               ));
     }
