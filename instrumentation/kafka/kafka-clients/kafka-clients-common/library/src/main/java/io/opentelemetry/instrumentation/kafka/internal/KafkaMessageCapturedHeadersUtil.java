@@ -11,6 +11,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+/**
+ * This class is internal and is hence not for public use. Its APIs are unstable and can change at
+ * any time.
+ */
 public class KafkaMessageCapturedHeadersUtil {
   private static final String CONSUMER_HEADERS_PROPERTY =
       "otel.instrumentation.kafka.capture-headers.consumer";
@@ -27,8 +31,8 @@ public class KafkaMessageCapturedHeadersUtil {
   }
 
   // these are naturally bounded because they only store keys listed in
-  // otel.instrumentation.http.capture-headers.server.request and
-  // otel.instrumentation.http.capture-headers.server.response
+  // otel.instrumentation.kafka.capture-headers.consumer and
+  // otel.instrumentation.kafka.capture-headers.producer
   private static final ConcurrentMap<String, AttributeKey<String>> consumerKeysCache =
       new ConcurrentHashMap<>();
   private static final ConcurrentMap<String, AttributeKey<String>> producerKeysCache =
@@ -48,7 +52,6 @@ public class KafkaMessageCapturedHeadersUtil {
   }
 
   private static AttributeKey<String> createKey(String type, String headerName) {
-    // headerName is always lowercase, see CapturedHttpHeaders
     String headerNormalized = headerName.replace('-', '_').replace(" ", "_");
     String key = "kafka." + type + ".header." + headerNormalized;
     return AttributeKey.stringKey(key);
