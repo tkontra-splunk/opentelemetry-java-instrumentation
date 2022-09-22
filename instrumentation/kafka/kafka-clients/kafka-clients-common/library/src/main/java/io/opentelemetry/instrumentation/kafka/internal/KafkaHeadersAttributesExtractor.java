@@ -16,34 +16,30 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Headers;
 
 /**
- * Extracts the specified "captured headers" (see KafkaMessageCapturedHeadersUtil) from a
- * REQUEST message.
+ * Extracts the specified "captured headers" (see KafkaMessageCapturedHeadersUtil) from a REQUEST
+ * message.
  *
- * This class is internal and is hence not for public use. Its APIs are unstable and can change at
- * any time.
+ * <p>This class is internal and is hence not for public use. Its APIs are unstable and can change
+ * at any time.
  */
 public final class KafkaHeadersAttributesExtractor<REQUEST>
     implements AttributesExtractor<REQUEST, Void> {
 
-  /**
-   * List of header names to capture as attributes.
-   */
+  /** List of header names to capture as attributes. */
   private final List<String> capturedMessageHeaders;
-  /**
-   * Lens to get the Headers collection from a kafka message.
-   */
+  /** Lens to get the Headers collection from a kafka message. */
   private final Function<REQUEST, Headers> messageHeadersGetter;
+
   private final KafkaHeadersGetter kafkaHeadersGetter = new KafkaHeadersGetter();
 
-  public static final Function<? super ConsumerRecord<?, ?>, Headers> CONSUMER_RECORD_HEADERS_GETTER =
-      ConsumerRecord::headers;
+  public static final Function<? super ConsumerRecord<?, ?>, Headers>
+      CONSUMER_RECORD_HEADERS_GETTER = ConsumerRecord::headers;
 
-  public static final Function<? super ProducerRecord<?, ?>, Headers> PRODUCER_RECORD_HEADERS_GETTER =
-      ProducerRecord::headers;
+  public static final Function<? super ProducerRecord<?, ?>, Headers>
+      PRODUCER_RECORD_HEADERS_GETTER = ProducerRecord::headers;
 
   public KafkaHeadersAttributesExtractor(
-      List<String> capturedMessageHeaders,
-      Function<REQUEST, Headers> headersGetter) {
+      List<String> capturedMessageHeaders, Function<REQUEST, Headers> headersGetter) {
     this.capturedMessageHeaders = capturedMessageHeaders;
     this.messageHeadersGetter = headersGetter;
   }
@@ -51,7 +47,7 @@ public final class KafkaHeadersAttributesExtractor<REQUEST>
   @Override
   public void onStart(AttributesBuilder attributes, Context parentContext, REQUEST message) {
     Headers headers = this.messageHeadersGetter.apply(message);
-    for (String headerName: capturedMessageHeaders) {
+    for (String headerName : capturedMessageHeaders) {
       String value = this.kafkaHeadersGetter.get(headers, headerName);
       if (value != null) {
         attributes.put(headerName, value);

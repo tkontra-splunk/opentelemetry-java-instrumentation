@@ -17,7 +17,6 @@ import io.opentelemetry.instrumentation.api.instrumenter.messaging.MessageOperat
 import io.opentelemetry.instrumentation.api.instrumenter.messaging.MessagingAttributesExtractor;
 import io.opentelemetry.instrumentation.api.instrumenter.messaging.MessagingSpanNameExtractor;
 import java.util.Collections;
-import java.util.List;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -52,22 +51,20 @@ public final class KafkaInstrumenterFactory {
     KafkaProducerAttributesGetter getter = KafkaProducerAttributesGetter.INSTANCE;
     MessageOperation operation = MessageOperation.SEND;
 
-    InstrumenterBuilder<ProducerRecord<?, ?>, Void> instrumenterBuilder = Instrumenter
-        .<ProducerRecord<?, ?>, Void>builder(
-            openTelemetry,
-            instrumentationName,
-            MessagingSpanNameExtractor.create(getter, operation))
-        .addAttributesExtractor(MessagingAttributesExtractor.create(getter, operation))
-        .addAttributesExtractors(extractors)
-        .addAttributesExtractor(new KafkaProducerAdditionalAttributesExtractor())
-        .setErrorCauseExtractor(errorCauseExtractor);
+    InstrumenterBuilder<ProducerRecord<?, ?>, Void> instrumenterBuilder =
+        Instrumenter.<ProducerRecord<?, ?>, Void>builder(
+                openTelemetry,
+                instrumentationName,
+                MessagingSpanNameExtractor.create(getter, operation))
+            .addAttributesExtractor(MessagingAttributesExtractor.create(getter, operation))
+            .addAttributesExtractors(extractors)
+            .addAttributesExtractor(new KafkaProducerAdditionalAttributesExtractor())
+            .setErrorCauseExtractor(errorCauseExtractor);
     if (KafkaMessageCapturedHeadersUtil.shouldCaptureProducerMessageHeaders()) {
-      instrumenterBuilder
-          .addAttributesExtractor(
-              new KafkaHeadersAttributesExtractor<>(
-                  KafkaMessageCapturedHeadersUtil.getProducerMessageHeaders(),
-                  KafkaHeadersAttributesExtractor.PRODUCER_RECORD_HEADERS_GETTER
-              ));
+      instrumenterBuilder.addAttributesExtractor(
+          new KafkaHeadersAttributesExtractor<>(
+              KafkaMessageCapturedHeadersUtil.getProducerMessageHeaders(),
+              KafkaHeadersAttributesExtractor.PRODUCER_RECORD_HEADERS_GETTER));
     }
     return instrumenterBuilder.newInstrumenter(SpanKindExtractor.alwaysProducer());
   }
@@ -109,12 +106,10 @@ public final class KafkaInstrumenterFactory {
       builder.addAttributesExtractor(new KafkaConsumerExperimentalAttributesExtractor());
     }
     if (KafkaMessageCapturedHeadersUtil.shouldCaptureConsumerMessageHeaders()) {
-      builder
-          .addAttributesExtractor(
-              new KafkaHeadersAttributesExtractor<>(
-                  KafkaMessageCapturedHeadersUtil.getConsumerMessageHeaders(),
-                  KafkaHeadersAttributesExtractor.CONSUMER_RECORD_HEADERS_GETTER
-              ));
+      builder.addAttributesExtractor(
+          new KafkaHeadersAttributesExtractor<>(
+              KafkaMessageCapturedHeadersUtil.getConsumerMessageHeaders(),
+              KafkaHeadersAttributesExtractor.CONSUMER_RECORD_HEADERS_GETTER));
     }
 
     if (!KafkaPropagation.isPropagationEnabled()) {
