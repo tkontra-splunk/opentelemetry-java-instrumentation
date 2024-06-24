@@ -51,15 +51,22 @@ public final class KafkaInstrumenterFactory {
     KafkaProducerAttributesGetter getter = KafkaProducerAttributesGetter.INSTANCE;
     MessageOperation operation = MessageOperation.SEND;
 
-    return Instrumenter.<ProducerRecord<?, ?>, Void>builder(
-            openTelemetry,
-            instrumentationName,
-            MessagingSpanNameExtractor.create(getter, operation))
-        .addAttributesExtractor(MessagingAttributesExtractor.create(getter, operation))
-        .addAttributesExtractors(extractors)
-        .addAttributesExtractor(new KafkaProducerAdditionalAttributesExtractor())
-        .setErrorCauseExtractor(errorCauseExtractor)
-        .newInstrumenter(SpanKindExtractor.alwaysProducer());
+    InstrumenterBuilder<ProducerRecord<?, ?>, Void> instrumenterBuilder =
+        Instrumenter.<ProducerRecord<?, ?>, Void>builder(
+                openTelemetry,
+                instrumentationName,
+                MessagingSpanNameExtractor.create(getter, operation))
+            .addAttributesExtractor(MessagingAttributesExtractor.create(getter, operation))
+            .addAttributesExtractors(extractors)
+            .addAttributesExtractor(new KafkaProducerAdditionalAttributesExtractor())
+            .setErrorCauseExtractor(errorCauseExtractor);
+    if (KafkaMessageCapturedHeadersUtil.shouldCaptureProducerMessageHeaders()) {
+      instrumenterBuilder.addAttributesExtractor(
+          new KafkaHeadersAttributesExtractor<>(
+              KafkaMessageCapturedHeadersUtil.getProducerMessageHeaders(),
+              KafkaHeadersAttributesExtractor.PRODUCER_RECORD_HEADERS_GETTER));
+    }
+    return instrumenterBuilder.newInstrumenter(SpanKindExtractor.alwaysProducer());
   }
 
   public Instrumenter<ConsumerRecords<?, ?>, Void> createConsumerReceiveInstrumenter() {
@@ -97,6 +104,12 @@ public final class KafkaInstrumenterFactory {
             .setErrorCauseExtractor(errorCauseExtractor);
     if (KafkaConsumerExperimentalAttributesExtractor.isEnabled()) {
       builder.addAttributesExtractor(new KafkaConsumerExperimentalAttributesExtractor());
+    }
+    if (KafkaMessageCapturedHeadersUtil.shouldCaptureConsumerMessageHeaders()) {
+      builder.addAttributesExtractor(
+          new KafkaHeadersAttributesExtractor<>(
+              KafkaMessageCapturedHeadersUtil.getConsumerMessageHeaders(),
+              KafkaHeadersAttributesExtractor.CONSUMER_RECORD_HEADERS_GETTER));
     }
 
     if (!KafkaPropagation.isPropagationEnabled()) {
